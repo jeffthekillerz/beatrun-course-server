@@ -2,7 +2,8 @@
 
 $requester_ip = $_SERVER['REMOTE_ADDR'];
 $ratelimit_period = 30;
-$upload_ratelimit_dir = "_internal.json";
+$upload_ratelimit_dir = "_ratelimit.json";
+$upload_keys = "_internal.json";
 
 // i used this in hvh.tf... good times.
 function is_ratelimited() {
@@ -47,6 +48,23 @@ function sanitize($string, $force_lowercase = true, $anal = false) {
         $clean;
 }
 
+function is_allowed($key) {
+    global $upload_keys;
+    $key_array = json_decode(file_get_contents($upload_keys), $associative = true);
+
+    if (count($key_array) <= 0) {
+        return true;
+    }
+
+    $key_sanitized = sanitize($key, true, true);
+
+    if ($key_array[$key_sanitized]) {
+        return true;
+    }
+
+    return false;
+}
+
 $headers = getallheaders();
 
 if ($_SERVER['REQUEST_METHOD'] != "POST" ||
@@ -55,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] != "POST" ||
     $headers["accept-encoding"] != "gzip, deflate") { print("Rejected.\n"); return; }
 
 if (is_ratelimited()) { print("Ratelimited.\n"); return; }
+if (!is_allowed($headers["authorization"])) { print("Not valid key"); return; }
 
 $body = file_get_contents('php://input');
 $decoded_body = json_decode($body, true);
