@@ -1,22 +1,29 @@
 <?php
 
-$requester_ip = $_SERVER['REMOTE_ADDR'];
-$ratelimit_period = 30;
+$ratelimit_period = 5;
 $upload_ratelimit_dir = "_ratelimit.json";
 $upload_keys = "_internal.json";
+$log_dir = "_logs.log";
+
+$headers = getallheaders();
+$authkey = sanitize($_GET["key"], true, true);
+$map = sanitize($_GET["map"], true, true);
+$code = sanitize($_GET["sharecode"], true, true);
+$requester_ip = $_SERVER['REMOTE_ADDR'];
+
+function _log($text) {
+    global $log_dir, $authkey, $map, $requester_ip, $code;
+    file_put_contents($log_dir, date("D M j G:i:s T Y")." - getcourse.php - ".$text." (".$authkey.", ".$map.", ".$code.", ".$requester_ip.")\n", FILE_APPEND);
+}
 
 // i used this in hvh.tf... good times.
 function is_ratelimited() {
     global $requester_ip, $upload_ratelimit_dir, $ratelimit_period;
     $ratelimit_array = json_decode(file_get_contents($upload_ratelimit_dir), $associative = true);
 
-    if ($ratelimit_array[$requester_ip] === -1) {
-        return true; // shadow ban 8)
-    }
+    if ($ratelimit_array[$requester_ip] === -1) { return true; } // you can shadowban ip's like that!
 
-    if (time() - $ratelimit_array[$requester_ip] <= $ratelimit_period) {
-        return true;
-    }
+    if (time() - $ratelimit_array[$requester_ip] <= $ratelimit_period) { return true; }
 
     foreach ($ratelimit_array as $uid => $time) {
         if (time() - $ratelimit_array[$uid] > $ratelimit_period) {
@@ -35,12 +42,12 @@ function is_ratelimited() {
 }
 
 function sanitize($string, $force_lowercase = true, $anal = false) {
-    $strip = array("~", "`", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "=", "+", "[", "{", "]",
+    $strip = array("~", "`", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "=", "+", "[", "{", "]",
                    "}", "\\", "|", ";", ":", "\"", "'", "&#8216;", "&#8217;", "&#8220;", "&#8221;", "&#8211;", "&#8212;",
                    "â€”", "â€“", ",", "<", ".", ">", "/", "?");
     $clean = trim(str_replace($strip, "", strip_tags($string)));
     $clean = preg_replace('/\s+/', "-", $clean);
-    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9]/", "", $clean) : $clean ;
+    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9_]/", "", $clean) : $clean ;
     return ($force_lowercase) ?
         (function_exists('mb_strtolower')) ?
             mb_strtolower($clean, 'UTF-8') :
@@ -52,37 +59,30 @@ function is_allowed($key) {
     global $upload_keys;
     $key_array = json_decode(file_get_contents($upload_keys), $associative = true);
 
-    if (count($key_array) <= 0) {
-        return true;
-    }
+    if (count($key_array) <= 0) { return true; }
 
-    $key_sanitized = sanitize($key, true, true);
-
-    if ($key_array[$key_sanitized]) {
-        return true;
-    }
+    if ($key_array[$key]) { return true; }
 
     return false;
 }
 
-$headers = getallheaders();
+function headers_are_valid($headers) {
+    if ($_SERVER['REQUEST_METHOD'] != "GET" ||
+        $headers["user-agent"] != "Valve/Steam HTTP Client 1.0 (4000)" ||
+        $headers["accept-encoding"] != "gzip, deflate") { return false; } else { return true; }
+}
 
-if ($_SERVER['REQUEST_METHOD'] != "GET" ||
-    $headers["user-agent"] != "Valve/Steam HTTP Client 1.0 (4000)" ||
-    $headers["accept-encoding"] != "gzip, deflate") { print("Rejected\n"); return; }
+if (!headers_are_valid($headers)) { _log("Invalid headers."); print("Invalid headers."); return; }
+if (is_ratelimited()) { _log("Ratelimited."); print("Ratelimited"); return; }
+if (!is_allowed($authkey)) { _log("Invalid authkey."); print("Not valid key"); return; }
 
-if (is_ratelimited()) { print("Not member"); return; } // placeholder cuz i dont want to modify original beatrun code
-if (!is_allowed($headers["key"])) { print("Not valid key"); return; }
-
-$sanitized_map = sanitize($_GET["map"], true, true);
-$sanitized_code = sanitize($_GET["sharecode"], true, true);
-$path = "courses/".$sanitized_map."/".$sanitized_code.".txt";
-
+$path = "courses/".$map."/".$code.".txt";
 $body = file_get_contents($path);
 $decoded_body = json_decode($body, true);
-if (!$decoded_body) { print("Bad code"); return; }
+if (!$decoded_body) { _log("Bad code."); print("Bad code"); return; }
 
 print($body);
+_log("Loaded a course.");
 
 ?>
 
