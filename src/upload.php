@@ -15,6 +15,13 @@ function _log($text) {
     file_put_contents($log_dir, date("D M j G:i:s T Y")." - upload.php - ".$text." (".$authkey.", ".$map.", ".$requester_ip.")\n", FILE_APPEND);
 }
 
+function _error($reason) {
+    print($reason);
+    http_response_code(400);
+    _log($reason);
+    exit;
+}
+
 // i used this in hvh.tf... good times.
 function is_ratelimited() {
     global $requester_ip, $upload_ratelimit_dir, $ratelimit_period;
@@ -46,7 +53,7 @@ function sanitize($string, $force_lowercase = true, $anal = false) {
                    "â€”", "â€“", ",", "<", ".", ">", "/", "?");
     $clean = trim(str_replace($strip, "", strip_tags($string)));
     $clean = preg_replace('/\s+/', "-", $clean);
-    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9_]/", "", $clean) : $clean ;
+    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9_\-]/", "", $clean) : $clean ;
     return ($force_lowercase) ?
         (function_exists('mb_strtolower')) ?
             mb_strtolower($clean, 'UTF-8') :
@@ -85,26 +92,35 @@ function body_is_valid($body) {
     return true;
 }
 
-if (!headers_are_valid($headers)) { _log("Invalid headers."); print("Invalid headers."); return; }
-if (is_ratelimited()) { _log("Ratelimited."); print("Ratelimited.\n"); return; }
-if (!is_allowed($authkey)) { _log("Not valid key."); print("Not valid key"); return; }
+function generate_code() {
+    $code = "";
+    for ($i = 0; $i < 3; $i++) {
+        $code .= substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', mt_rand(1,10))), 1, 4);
+        if ($i == 0 || $i == 1) {$code .= "-";}
+    } 
+    return strtoupper($code);
+}
+
+if (!headers_are_valid($headers)) { _error("Invalid headers."); }
+if (is_ratelimited()) { _error("Ratelimited."); }
+if (!is_allowed($authkey)) { _error("Invalid key."); }
 
 $body = file_get_contents('php://input');
 $decoded_body = json_decode($body, true);
-if (!$decoded_body) { _log("Couldn't decode."); print("Rejected.\n"); return; }
-if (!body_is_valid($decoded_body)) { _log("Invalid course."); print("Invalid course.\n"); return; }
+if (!$decoded_body) { _error("Invalid course (not json)"); }
+if (!body_is_valid($decoded_body)) { _error("Invalid course (invalid signature)"); }
 print("Accepted.\n");
 
 $path = "courses/".$map."/";
 
-$course_id = rand(1, 9999999);
+$course_id = generate_code();
 $file = $path.$course_id.".txt";
 
 $iter_limit = 500;
 $iter = 0;
 while (file_exists($file)) {
-    if ($iter > $iter_limit) { print("Too many courses for this map. Try again or increase iter_limit.\n"); return; }
-    $course_id = rand(1, 9999999);
+    if ($iter > $iter_limit) { _error("Hit the iter_limit while looking for a free slot. Try again."); }
+    $course_id = generate_code();
     $file = $path.$course_id.".txt";
     $iter++;
 }

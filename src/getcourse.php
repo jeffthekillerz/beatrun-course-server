@@ -16,6 +16,13 @@ function _log($text) {
     file_put_contents($log_dir, date("D M j G:i:s T Y")." - getcourse.php - ".$text." (".$authkey.", ".$map.", ".$code.", ".$requester_ip.")\n", FILE_APPEND);
 }
 
+function _error($reason) {
+    print($reason);
+    http_response_code(400);
+    _log($reason);
+    exit;
+}
+
 // i used this in hvh.tf... good times.
 function is_ratelimited() {
     global $requester_ip, $upload_ratelimit_dir, $ratelimit_period;
@@ -47,7 +54,7 @@ function sanitize($string, $force_lowercase = true, $anal = false) {
                    "â€”", "â€“", ",", "<", ".", ">", "/", "?");
     $clean = trim(str_replace($strip, "", strip_tags($string)));
     $clean = preg_replace('/\s+/', "-", $clean);
-    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9_]/", "", $clean) : $clean ;
+    $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9_\-]/", "", $clean) : $clean ;
     return ($force_lowercase) ?
         (function_exists('mb_strtolower')) ?
             mb_strtolower($clean, 'UTF-8') :
@@ -85,15 +92,15 @@ function body_is_valid($body) {
     return true;
 }
 
-if (!headers_are_valid($headers)) { _log("Invalid headers."); print("Invalid headers."); return; }
-if (is_ratelimited()) { _log("Ratelimited."); print("Ratelimited"); return; }
-if (!is_allowed($authkey)) { _log("Invalid authkey."); print("Not valid key"); return; }
+if (!headers_are_valid($headers)) { _error("Invalid headers."); }
+if (is_ratelimited()) { _error("Ratelimited."); }
+if (!is_allowed($authkey)) { _error("Invalid key."); }
 
 $path = "courses/".$map."/".$code.".txt";
 $body = file_get_contents($path);
 $decoded_body = json_decode($body, true);
-if (!$decoded_body) { _log("Bad code."); print("Bad code"); return; }
-if (!body_is_valid($decoded_body)) { _log("Invalid course."); print("Invalid course.\n"); return; }
+if (!$decoded_body) {_error("Invalid course (not json)"); }
+if (!body_is_valid($decoded_body)) { _error("Invalid course (invalid signature)"); }
 
 print($body);
 _log("Loaded a course under the name: ".sanitize($decoded_body[4], true, true));
