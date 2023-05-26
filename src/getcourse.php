@@ -72,6 +72,19 @@ function headers_are_valid($headers) {
         $headers["accept-encoding"] != "gzip, deflate") { return false; } else { return true; }
 }
 
+function body_is_valid($body) {
+    if (count($body) != 6) { return false; }
+
+    if (!is_array($body[0]) || 
+        !is_array($body[1]) || 
+        !is_string($body[2]) || 
+        !is_float($body[3]) || 
+        !is_string($body[4]) || 
+        !is_array($body[5])) { return false; }
+
+    return true;
+}
+
 if (!headers_are_valid($headers)) { _log("Invalid headers."); print("Invalid headers."); return; }
 if (is_ratelimited()) { _log("Ratelimited."); print("Ratelimited"); return; }
 if (!is_allowed($authkey)) { _log("Invalid authkey."); print("Not valid key"); return; }
@@ -80,9 +93,10 @@ $path = "courses/".$map."/".$code.".txt";
 $body = file_get_contents($path);
 $decoded_body = json_decode($body, true);
 if (!$decoded_body) { _log("Bad code."); print("Bad code"); return; }
+if (!body_is_valid($decoded_body)) { _log("Invalid course."); print("Invalid course.\n"); return; }
 
 print($body);
-_log("Loaded a course.");
+_log("Loaded a course under the name: ".sanitize($decoded_body[4], true, true));
 
 ?>
 
