@@ -6,9 +6,9 @@ $upload_keys = "_internal.json";
 $log_dir = "_logs.log";
 
 $headers = getallheaders();
-$authkey = sanitize($_GET["key"], true, true);
-$map = sanitize($_GET["map"], true, true);
-$code = sanitize($_GET["sharecode"], true, true);
+$authkey = sanitize($_GET["key"], false, true);
+$map = sanitize($_GET["map"], false, true);
+$code = sanitize($_GET["sharecode"], false, true);
 $requester_ip = $_SERVER['REMOTE_ADDR'];
 
 function _log($text) {
@@ -103,7 +103,7 @@ if (!$decoded_body) {_error("Invalid course (not json)"); }
 if (!body_is_valid($decoded_body)) { _error("Invalid course (invalid signature)"); }
 
 print($body);
-_log("Loaded a course under the name: ".sanitize($decoded_body[4], true, true));
+_log("Loaded a course under the name: ".sanitize($decoded_body[4], false, true));
 
 ?>
 

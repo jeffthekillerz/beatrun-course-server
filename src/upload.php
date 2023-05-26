@@ -6,8 +6,8 @@ $upload_keys = "_internal.json";
 $log_dir = "_logs.log";
 
 $headers = getallheaders();
-$authkey = sanitize($headers["Authorization"], true, true);
-$map = sanitize($headers["Game-Map"], true, true);
+$authkey = sanitize($headers["Authorization"], false, true);
+$map = sanitize($headers["Game-Map"], false, true);
 $requester_ip = $_SERVER['REMOTE_ADDR'];
 
 function _log($text) {
@@ -128,7 +128,7 @@ while (file_exists($file)) {
 if (!is_dir($path)) { mkdir($path, 0755, true); }
 file_put_contents($file, $body);
 
-_log("Uploaded a course: ".$course_id." (name: ".sanitize($decoded_body[4], true, true).")");
+_log("Uploaded a course: ".$course_id." (name: ".sanitize($decoded_body[4], false, true).")");
 print("Uploaded under the ID: ".$course_id."\n");
 
 ?>
