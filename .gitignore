@@ -2,3 +2,4 @@ src/_ratelimit.json
 src/_internal.json
 src/_logs.log
 src/courses/*
+src/steamauth/SteamConfig.php

@@ -1,9 +1,14 @@
 # beatrun course server
 <p>
-simple beatrun course server recreation. <br><br>
-_internal.json contains auth keys. leave it at {} to allow anyone to upload or get courses. keep in mind 0 is the default apikey in beatrun <br>
-_ratelimit.json contains ip's for ratelimitage <br>
-_logs.log contains private info<br>
-hide all of these files from being accessed by the public using settings in nginx or apache or whatever <br><br>
-to use a custom course server, modify OnlineCourse.lua found in beatrun/gamemodes/gamemode/cl/ and replace all datae.org mentions to whatever custom server you have.
+Pretty advanced beatrun course server recreation.<br><br>
+How to use:<br>
+1) Hide steamauth and data from public. Don't let people access them and the files inside. <br>
+2.1) Remove register.php to disallow public registration using steam accounts, then add authkeys manually to data/_keys.json. <br>
+OR<BR>
+2.2) Keep public registration and then do the following steps: Go to steamauth, configure the steamconfig.php file and remove the brackets from its name.<br><br>
+_locked.json contains blocked identificators.<br>
+_keys.json contains authkeys.<br>
+_ratelimit.json is mostly internal, but it keeps track of ratelimiting... duh<br>
+_record.json is internal too, keeps track of ips used to log into an account.<br>
+_logs.log are obviously logs.
 </p>
