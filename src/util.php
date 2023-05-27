@@ -12,7 +12,7 @@ $ip_list_refresh = 21600; // how fast can a person change their ip on their acco
 $authkey = "";
 $map = "";
 $code = "";
-$ip = $_SERVER['REMOTE_ADDR'];
+$ip = $_SERVER["HTTP_CF_CONNECTING_IP"] ?? $_SERVER['REMOTE_ADDR'];
 $headers = getallheaders();
 
 function sanitize($string, $force_lowercase = true, $anal = false) {
