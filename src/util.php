@@ -170,8 +170,6 @@ function get_authkey_from_userid($userid) {
 function is_multiaccount($userid) {
     global $account_record_dir, $ip_list_refresh, $ip, $lock_dir, $authkeys_dir;
 
-    $is_multiaccount_bool = false;
-
     $locks = json_decode(file_get_contents($lock_dir), true);
     $authkey = get_authkey_from_userid($userid);
 
