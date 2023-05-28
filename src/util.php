@@ -210,7 +210,7 @@ function is_multiaccount($userid) {
 
 function _log_browser($text) {
     global $log_dir, $authkey, $map, $ip;
-    file_put_contents($log_dir, date("D M j G:i:s T Y")." - ".$text." (".$authkey.", ".$ip.", ".get_userid_from_authkey($authkey).")\n", FILE_APPEND);
+    file_put_contents($log_dir, date("D M j G:i:s T Y")." - ".$text."(".$ip.")\n", FILE_APPEND);
 }
 
 function _log($text) {
