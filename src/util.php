@@ -208,29 +208,9 @@ function is_multiaccount($userid) {
     return false;
 }
 
-function register_steam_account($userid, $timecreated) {
-    global $authkeys_dir;
-
-    if (time() - $timecreated < 7890000) { return "Account too young. Needs to be at least 3 months old."; }
-    if (!account_owns_gmod($userid)) { return "Account doesn't have Garry's mod. Make sure your game details are public if you think this is wrong."; }
-    if (is_multiaccount($userid)) { return "Your account is locked. Contact site administration."; }
-
-    $keys = json_decode(file_get_contents($authkeys_dir), true);
-    foreach ($keys as $akey => $value) {
-        if ($value === $userid) {
-            return $akey;
-        }
-    }
-
-    $key = generateRandomString(32);
-    while ($keys[$key]) {
-        $key = generateRandomString(32);
-    }
-    $keys[$key] = $userid;
-
-    file_put_contents($authkeys_dir, json_encode($keys, JSON_PRETTY_PRINT));
-
-    return $key;
+function _log_browser($text) {
+    global $log_dir, $authkey, $map, $ip;
+    file_put_contents($log_dir, date("D M j G:i:s T Y")." - ".$text." (".$authkey.", ".$ip.", ".get_userid_from_authkey($authkey).")\n", FILE_APPEND);
 }
 
 function _log($text) {
@@ -244,5 +224,34 @@ function _error($reason) {
     _log($reason);
     exit;
 }
+
+function register_steam_account($userid, $timecreated) {
+    global $authkeys_dir;
+
+    if (time() - $timecreated < 7890000) { _log_browser("util.php - Too young of an account: ".$userid." ".$timecreated); return "Account too young. Needs to be at least 3 months old."; }
+    if (!account_owns_gmod($userid)) { _log_browser("util.php - GMOD not found: ".$userid." ".$timecreated); return "Account doesn't have Garry's mod. Make sure your game details are public if you think this is wrong."; }
+    if (is_multiaccount($userid)) { _log_browser("util.php - Got owned for sharing his account...: ".$userid." ".$timecreated); return "Your account is locked. Contact site administration."; }
+
+    $keys = json_decode(file_get_contents($authkeys_dir), true);
+    foreach ($keys as $akey => $value) {
+        if ($value === $userid) {
+            _log_browser("util.php - Existing user logged back in: ".$userid." ".$timecreated." ".$akey);
+            return $akey;
+        }
+    }
+
+    $key = generateRandomString(32);
+    while ($keys[$key]) {
+        $key = generateRandomString(32);
+    }
+    $keys[$key] = $userid;
+
+    file_put_contents($authkeys_dir, json_encode($keys, JSON_PRETTY_PRINT));
+
+    _log_browser("util.php - New user: ".$userid." ".$timecreated." ".$key);
+
+    return $key;
+}
+
 
 ?>
