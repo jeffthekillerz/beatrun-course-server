@@ -87,7 +87,7 @@ if (array_key_exists('_bcs_rm_course', $_POST)) {
 				<form method="post">
 					<input type="submit" name="_bcs_addkey" class="button" value="Add Key"/>
 					<input type="text" class="button" name="_bcs_addkey_target">
-					SteamID64
+					SteamID64 (this returns the existing authkey, if it exists)
 					<br><br>
 					<input type="submit" name="_bcs_rmkey" class="button" value="Remove Key"/>
 					<input type="text" class="button" name="_bcs_rmkey_target">
