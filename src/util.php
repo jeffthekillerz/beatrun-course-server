@@ -5,6 +5,8 @@ $authkeys_dir = "data/_keys.json";
 $ratelimit_dir = "data/_ratelimit.json";
 $account_record_dir = "data/_record.json";
 $lock_dir = "data/_locked.json";
+$admins_dir = "data/_admins.json";
+$webhook_url = ""; // discord webhook logging url
 
 $ratelimit_period = 5;
 $ip_list_refresh = 21600; // how fast can a person change their ip on their account. this is 6 hours
@@ -141,6 +143,63 @@ function lock_account($id) {
     $locks = json_decode(file_get_contents($lock_dir), true);
     $locks[$id] = true;
     file_put_contents($lock_dir, json_encode($locks, JSON_PRETTY_PRINT));
+    return "Locked.";
+}
+
+function unlock_account($id) {
+    global $lock_dir;
+    $locks = json_decode(file_get_contents($lock_dir), true);
+    unset($locks[$id]);
+    file_put_contents($lock_dir, json_encode($locks, JSON_PRETTY_PRINT));
+    return "Unlocked.";
+}
+
+function gen_key($userid) {
+    global $authkeys_dir;
+    $keys = json_decode(file_get_contents($authkeys_dir), true);
+
+    foreach ($keys as $authkey => $authsteamid) {
+        if ($authsteamid === $userid) {
+            return $authkey;
+        }
+    }
+
+    $key = generateRandomString(32);
+    while (isset($keys[$key])) {
+        $key = generateRandomString(32);
+    }
+    $keys[$key] = $userid;
+
+    file_put_contents($authkeys_dir, json_encode($keys, JSON_PRETTY_PRINT));
+    return $key;
+}
+
+function rm_key($userid) {
+    global $authkeys_dir;
+    $key_array = json_decode(file_get_contents($authkeys_dir), true);
+
+    foreach ($key_array as $authkey => $authsteamid) {
+        if ($authsteamid === $userid) {
+            unset($key_array[$authkey]);
+        }
+    }
+
+    file_put_contents($authkeys_dir, json_encode($key_array, JSON_PRETTY_PRINT));
+    return "Removed.";
+}
+
+function rm_course($map, $code) {
+    $path = "courses/".$map."/".$code.".txt";
+    $body = file_get_contents($path);
+    $decoded_body = json_decode($body, true);
+    if (!$decoded_body) { echo "Invalid course (not json)"; }
+    if (!body_is_valid($decoded_body)) { echo "getcourse.php - Invalid course (invalid signature)"; }
+
+    if (!unlink($path)) {
+        return "Failed to delete. Check validity of the input.";
+    } else {
+        return "Deleted.";
+    }
 }
 
 function get_userid_from_authkey($authkey) {
@@ -208,14 +267,50 @@ function is_multiaccount($userid) {
     return false;
 }
 
-function _log_browser($text) {
-    global $log_dir, $authkey, $map, $ip;
-    file_put_contents($log_dir, date("D M j G:i:s T Y")." - ".$text."(".$ip.")\n", FILE_APPEND);
+function _log_webhook($text) {
+    global $webhook_url;
+
+    if (strlen($webhook_url) <= 0) { return; }
+
+    $json_data = json_encode(["content" => $text], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+    $ch = curl_init($webhook_url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    print(curl_exec($ch));
+    curl_close($ch);
 }
 
-function _log($text) {
+function _log_browser($content) {
     global $log_dir, $authkey, $map, $ip;
-    file_put_contents($log_dir, date("D M j G:i:s T Y")." - ".$text." (".$authkey.", ".$map.", ".$ip.", ".get_userid_from_authkey($authkey).")\n", FILE_APPEND);
+
+    $text = date("D M j G:i:s T Y");
+    $text .= " - ";
+    $text .= $content;
+    $text .= " (";
+    $text .= "IP: ".$ip.")\n";
+
+    _log_webhook($text);
+    file_put_contents($log_dir, $text, FILE_APPEND);
+}
+
+function _log($content) {
+    global $log_dir, $authkey, $map, $ip;
+
+    $text = date("D M j G:i:s T Y");
+    $text .= " - ";
+    $text .= $content;
+    $text .= " (";
+    $text .= "Authkey: ".$authkey.", ";
+    $text .= "Map: ".$map.", ";
+    $text .= "IP: ".$ip.", ";
+    $text .= "UserID: ".get_userid_from_authkey($authkey).")\n";
+    
+    _log_webhook($text);
+    file_put_contents($log_dir, $text, FILE_APPEND);
 }
 
 function _error($reason) {
@@ -228,20 +323,28 @@ function _error($reason) {
 function register_steam_account($userid, $timecreated) {
     global $authkeys_dir;
 
-    if (time() - $timecreated < 7890000) { _log_browser("util.php - Too young of an account: ".$userid." ".$timecreated); return "Account too young. Needs to be at least 3 months old."; }
-    if (!account_owns_gmod($userid)) { _log_browser("util.php - GMOD not found: ".$userid." ".$timecreated); return "Account doesn't have Garry's mod. Make sure your game details are public if you think this is wrong."; }
-    if (is_multiaccount($userid)) { _log_browser("util.php - Got owned for sharing his account...: ".$userid." ".$timecreated); return "Your account is locked. Contact site administration."; }
+    $ragh = "(";
+    $ragh .= "UserID: ".$userid.", ";
+    $ragh .= "timecreated: ".$timecreated.")";
+
+    if (time() - $timecreated < 7890000) { _log_browser("util.php - Too young of an account ".$ragh); return "Account too young. Needs to be at least 3 months old."; }
+    if (!account_owns_gmod($userid)) { _log_browser("util.php - GMOD not found ".$ragh); return "Account doesn't have Garry's mod. Make sure your game details are public if you think this is wrong."; }
+    if (is_multiaccount($userid)) { _log_browser("util.php - Got owned for sharing his account... ".$ragh); return "Your account is locked. Contact site administration."; }
 
     $keys = json_decode(file_get_contents($authkeys_dir), true);
     foreach ($keys as $akey => $value) {
         if ($value === $userid) {
-            _log_browser("util.php - Existing user logged back in: ".$userid." ".$timecreated." ".$akey);
+            $ragh = "(";
+            $ragh .= "UserID: ".$userid.", ";
+            $ragh .= "timecreated: ".$timecreated.", ";
+            $ragh .= "key: ".$akey.")";
+            _log_browser("util.php - Existing user logged back in ".$ragh);
             return $akey;
         }
     }
 
     $key = generateRandomString(32);
-    while ($keys[$key]) {
+    while (isset($keys[$key])) {
         $key = generateRandomString(32);
     }
     $keys[$key] = $userid;

@@ -9,14 +9,7 @@ require ('util.php');
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            body {
-                background-color: #111;
-              	font-family: "Arial";
-  				color: #ffffff;
-  				font-size: 14px;
-            }
-        </style>
+        <link rel="stylesheet" href="css/main.css">
     </head>
     <body>
         <section>
@@ -24,15 +17,16 @@ require ('util.php');
             <!-- Login process start -->
             <?php if (!isset($_SESSION['steamid'])) { ?>
                 <a href="?login">
-                    <img src="https://steamcommunity-a.akamaihd.net/public/images/signinthroughsteam/sits_02.png">
+                    <button class="button" type="submit">Log-in</button>
                 </a>
-            	<p>Log-in with steam to register a course account and receive the authkey.<br>We don't log anything about your steam profile aside from the SteamID itself.<br>Make sure your game details are public.<p>
+            	<p>Log-in with steam to register an account and receive the authkey for the course system.<br>Make sure to set your profile and game details to public.<br>Remember that you NEED to own garry's mod and have a sufficiently old account.</p>
+                <p>Terms of use:<br>1) Don't share apikeys.<br>2) Don't post courses with names that are deemed offensive.<br>3) Don't spam the servers with garbage courses.<br>Failure to obide by these temrs will result in account termination.</p>
             <?php return; } ?>
             <!-- Login process end -->
 
             <!-- After login. Gives you your apikey here. -->
             <form action="" method="get">
-                <button name="logout" type="submit">Logout</button>
+                <button class="button" name="logout" type="submit">Logout</button>
             </form>
             <p>Your apikey is: <b>
             <?php 
