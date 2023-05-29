@@ -20,7 +20,7 @@ require ('util.php');
                     <button class="button" type="submit">Log-in</button>
                 </a>
             	<p>Log-in with steam to register an account and receive the authkey for the course system.<br>Make sure to set your profile and game details to public.<br>Remember that you NEED to own garry's mod and have a sufficiently old account.</p>
-                <p>Terms of use:<br>1) Don't share apikeys.<br>2) Don't post courses with names that are deemed offensive.<br>3) Don't spam the servers with garbage courses.<br>Failure to obide by these temrs will result in account termination.</p>
+                <p>Terms of use:<br>1) Don't share apikeys.<br>2) Don't post courses with names that are deemed offensive.<br>3) Don't spam the servers with garbage courses.<br>Failure to obide by these terms will result in account termination.</p>
             <?php return; } ?>
             <!-- Login process end -->
 
